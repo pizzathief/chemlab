@@ -1,3 +1,4 @@
+/chemlab/molsim/rdf.c
 /chemlab/utils/cdist.cpp
 /chemlab/utils/cdist.c
 /chemlab/graphics/renderers/utils.c
@@ -17,3 +18,10 @@ fontconfig/
 docs/_build
 *.so
 \#*
+*.pyd
+chemlab-bbfreeze.py
+chemlab.spec
+sxstrace.etl
+sxstrace.txt
+
+*.ipynb_checkpoints/

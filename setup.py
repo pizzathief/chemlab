@@ -1,12 +1,11 @@
-from distribute_setup import use_setuptools
-use_setuptools()
 from setuptools import setup, find_packages, Extension
 from Cython.Distutils import build_ext
 import numpy as np
 
 ext_modules = [Extension('chemlab.libs.ckdtree', ['chemlab/libs/ckdtree.pyx']),
+               Extension('chemlab.utils._covertree', ['chemlab/utils/_covertree.pyx']),
                Extension('chemlab.utils.celllinkedlist',
-                        ['chemlab/utils/celllinkedlist.pyx']),
+                         ['chemlab/utils/celllinkedlist.pyx']),
                Extension('chemlab.utils.cdist',
                          ['chemlab/utils/cdist.pyx']),
                Extension('chemlab.graphics.renderers.utils', 
@@ -20,13 +19,17 @@ ext_modules = [Extension('chemlab.libs.ckdtree', ['chemlab/libs/ckdtree.pyx']),
 
 setup(
     name = "chemlab",
-    version = "0.2",
+    version = "1.1",
     packages = find_packages(),
     cmdclass = {'build_ext': build_ext},
     ext_modules = ext_modules,
     include_dirs = [np.get_include()],
+    install_requires = ['dask', 'toolz', 'cython', 'six', 
+                        'numpy', 'scipy', 'matplotlib', 'h5py'],
+    extras_require={'qt': ['pyqt==4']},
     package_data = {'': ['distribute_setup.py', '*.rst', '*.txt'],
                     'chemlab.graphics.renderers.shaders': ['*.vert', '*.frag'],
+                    'chemlab.graphics.postprocessing.shaders': ['*.vert', '*.frag'],
                     'chemlab.resources' : ["*"],
                     'chemlab.db.localdb.data' : ['*'],
                     'chemlab.db.localdb.molecule' : ['*'],
@@ -58,8 +61,9 @@ setup(
                    'Topic :: Scientific/Engineering :: Visualization',
                    'Topic :: Scientific/Engineering :: Physics',
                    'Topic :: Multimedia :: Graphics :: Viewers',
-                   'Programming Language :: Python :: 2.7'],
-    license = "GPL3",
+                   'Programming Language :: Python :: 2.7',
+                   'Programming Language :: Python :: 3.3'],
+    license = "LGPL(no PyQt), GPL3(with PyQt)",
     keywords = "chemistry molecular_viewer",
     url = "https://chemlab.github.com/chemlab"
 )

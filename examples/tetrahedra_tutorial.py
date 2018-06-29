@@ -4,7 +4,7 @@ v2 = np.array([-1.0, 0.0, -1.0/np.sqrt(2)])
 v3 = np.array([0.0, 1.0, 1.0/np.sqrt(2)])
 v4 = np.array([0.0, -1.0, 1.0/np.sqrt(2)])
 
-from chemlab.graphics import QtViewer
+from chemlab.graphics.qt import QtViewer
 from chemlab.graphics.renderers import PointRenderer
 from chemlab.graphics.colors import black, green, blue, red
 
@@ -25,9 +25,16 @@ colors = [green] * 12
 
 # Normals: cross-product for each face
 n1 = -np.cross(v4 - v1, v3 - v1)
+n1 /= np.linalg.norm(n1)
+
 n2 = -np.cross(v4 - v3, v2 - v3)
+n2 /= np.linalg.norm(n2)
+
 n3 = -np.cross(v3 - v1, v2 - v1)
+n3 /= np.linalg.norm(n3)
+
 n4 = -np.cross(v4 - v2, v1 - v2)
+n4 /= np.linalg.norm(n4)
 
 normals = [n1, n1, n1,
            n2, n2, n2,

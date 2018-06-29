@@ -19,15 +19,15 @@ The classes responsible for the I/O are subclasses of
 file-like object as the first argument and they work all in the same
 way, here is an example of GroHandler::
 
-  from chemlab.io import GroIO
+  from chemlab.io.handlers import GromacsIO
   
-  fd = open('waterbox.gro')
-  infile = GroIO(fd)
+  fd = open('waterbox.gro', 'rb')
+  infile = GromacsIO(fd)
   system = infile.read('system')
   
   # Modify system as you wish...
   fd = open('waterbox_out.gro', 'w')
-  outfile = GroIO(fd)
+  outfile = GromacsIO(fd)
   outfile.write('system', system)
   
 You first create the handler instance for a certain format and then
@@ -48,21 +48,27 @@ format, since you may have to provide those attribute when you
 initialize your Atom, Molecule and System.
 
 You can easily open a data file without even having to search his format
-handler by using the utility function :py:func:`chemlab.io.datafile`::
+handler by using the utility function :py:func:`chemlab.io.datafile` this is
+the recommended way for automatically opening a file::
 
   from chemlab.io import datafile
   
+  # For reading
   sys = datafile('waterbox.gro').read('system')
   t, coords = datafile('traj.xtc').read('trajectory')
+  
+  # For writing
+  datafile("output.gro", "w").write("system", sys)
 
-.. seealso:: :doc:`api/chemlab.io.handlers`
+  
+.. seealso:: :doc:`api/chemlab.io.handlers` :py:func:`chemlab.io.datafile`
 
 Implementing your own IOHandler
 -------------------------------
 
 Implementing or improving an existing IOHandler is a great way to
-partecipate in chemlab development. Fortuately, it's extremely easy to
-setup one of them.
+participate in chemlab development. Fortunately, it's extremely easy to
+set one up.
 
 It boils down to a few steps:
 

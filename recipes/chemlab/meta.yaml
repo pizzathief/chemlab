@@ -1,0 +1,46 @@
+package:
+  name: chemlab
+  version: 1.1
+
+source:
+  git_url: https://github.com/chemlab/chemlab.git
+  git_tag: v1.1
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - cython
+    - numpy
+    - h5py
+    - matplotlib
+    - scipy
+    - toolz
+    - dask
+    - nose
+    - pyqt ==4.11.3
+
+  run:
+    - python
+    - h5py
+    - notebook
+    - numpy
+    - scipy
+    - pyqt ==4.11.3
+    - pyopengl
+    - chemview
+    - cython
+    - six
+    - dask
+
+test:
+  imports:
+    - chemlab
+    - chemlab.io
+    - chemlab.db
+    - chemlab.core
+
+about:
+  home: http://chemlab.rtfd.org
+  license: LGPL/GPLv3
+  summary: The Python Computational Chemistry library you were waiting for.

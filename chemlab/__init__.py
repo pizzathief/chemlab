@@ -1,2 +1,3 @@
-from core.molecule import Molecule, Atom
+import sys
 
+__version__ = '1.1'

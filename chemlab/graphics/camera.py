@@ -84,14 +84,13 @@ class Camera:
     def __init__(self):
         self.position = np.array([0.0, 0.0, 5.0]) # Position in real coordinates
         
-        
         self.pivot = np.array([0.0, 0.0, 0.0])
         
         # Perspective parameters
         self.fov = 45.0
         self.aspectratio = 1.0
-        self.z_near = 0.2
-        self.z_far = 50.0
+        self.z_near = 0.5
+        self.z_far = 500.0
         
         # Those are the direction fo the three axis of the camera in
         # world coordinates, used to compute the rotations necessary
@@ -277,6 +276,7 @@ class Camera:
              Array of points.
         
         '''
+        points = np.asarray(points)
         extraoff = 0.01
         
         # Project points on the plane defined by camera up and right
@@ -312,3 +312,23 @@ class Camera:
         self.position = self.pivot.copy() 
         # 2) add the distance plus a little extra room
         self.position -= self.c * (dist*(1 + extraoff))
+
+    def state(self):
+        '''Return the current camera state as a dictionary, it can be
+        restored with `Camera.restore`.
+
+        '''
+        return dict(a=self.a.tolist(), b=self.b.tolist(), c=self.c.tolist(),
+                    pivot=self.pivot.tolist(), position=self.position.tolist())
+
+    def restore(self, state):
+        '''Restore the camera state, passed as a *state*
+        dictionary. You can obtain a previous state from the method
+        `Camera.state`.
+
+        '''
+        self.a = np.array(state['a']).copy()
+        self.b = np.array(state['b']).copy()
+        self.c = np.array(state['c']).copy()
+        self.pivot = np.array(state['pivot']).copy()
+        self.position = np.array(state['position']).copy()

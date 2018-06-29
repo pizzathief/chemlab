@@ -1,3 +1,8 @@
+from ...db import ChemlabDB
+cdb = ChemlabDB()
+
+symbols = cdb.get("data", "symbols")
+
 oplsaa_map = {'Ar': 'Ar',
  'BA': 'Ba',
  'BR': 'Br',
@@ -77,6 +82,7 @@ oplsaa_map = {'Ar': 'Ar',
  'HH32': 'H',
  'HH33': 'H',
  'HO': 'H',
+ 'HW': 'H',
  'HW1': 'H',
  'HW2': 'H',
  'HZ': 'H',
@@ -117,4 +123,6 @@ oplsaa_map = {'Ar': 'Ar',
  'SR': 'Sr',
  'ZN': 'Zn'}
 
-gro_to_cl = oplsaa_map
+gro_to_cl = {}
+gro_to_cl.update(oplsaa_map)
+gro_to_cl.update({s : s for s in symbols})

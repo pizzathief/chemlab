@@ -20,7 +20,6 @@ def load_ipython_extension(ipython):
     png_formatter.for_type(Molecule, mol_to_png)
     png_formatter.for_type(System, sys_to_png)
 
-
 def unload_ipython_extension(ipython):
     # If you want your extension to be unloadable, put that logic here.
     return
@@ -29,10 +28,7 @@ def showmol(mol, style='ball-and-stick',
             width=300, height=300):
     v = QtViewer()
     w = v.widget
-    w.initializeGL()
-    
-    w.resize(width, height)
-    w.resizeGL(width, height)
+    w.initializeGL()    
     
     if style == 'ball-and-stick':
         bs = v.add_renderer(BallAndStickRenderer,
@@ -45,12 +41,7 @@ def showmol(mol, style='ball-and-stick',
 
     w.camera.autozoom(mol.r_array)
     
-    w.paintGL()
-    # Make sure to finish everything
-    
-    data = glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE)
-    # Make pil image to save as png
-    image = pil_Image.fromstring('RGB', (width, height), data)
+    image = w.toimage(width, height)
     b = BytesIO()
     image.save(b, format='png')
     data = b.getvalue()
@@ -69,11 +60,7 @@ def showsys(sys, width=400, height=400):
     v = QtViewer()
     w = v.widget
     w.initializeGL()
-
     
-    w.resize(width, height)
-    w.resizeGL(width, height)
-
     sr = v.add_renderer(AtomRenderer, sys.r_array, sys.type_array,
                         backend='impostors')
     
@@ -82,15 +69,10 @@ def showsys(sys, width=400, height=400):
     
     w.camera.autozoom(sys.r_array)
     
-    w.camera.orbit_y(3.14/4)    
-    w.camera.orbit_x(3.14/4)
+    w.camera.orbit_y(-3.14/4)    
+    w.camera.orbit_x(-3.14/4)
 
-    w.paintGL()
-    # Make sure to finish everything
-    data = glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE)
-
-    # Make pil image to save as png
-    image = pil_Image.fromstring('RGB', (width, height), data)
+    image = w.toimage(width, height)
     b = BytesIO()
     image.save(b, format='png')
     data = b.getvalue()

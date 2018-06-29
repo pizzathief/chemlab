@@ -23,7 +23,7 @@ class MolIO(IOHandler):
         self.check_feature(feature, "read")
         
         if feature == 'molecule':
-            string = self.fd.read()
+            string = self.fd.read().decode('utf-8')
             return parse_mol_string(string)
         
 def parse_mol_string(string):
@@ -54,8 +54,9 @@ def parse_mol_string(string):
         bond_types.append(int(t))
     
     mol = Molecule.from_arrays(r_array = np.array(coords)/10, # To nm
-                               type_array = np.array(types))
-    mol.bonds =  np.array(bonds) - 1 # TODO Ugly ugly ugly
+                               type_array = np.array(types), 
+                               bonds=np.array(bonds) - 1)
+    mol.bond_orders = np.array(bond_types)
     
     return mol
     

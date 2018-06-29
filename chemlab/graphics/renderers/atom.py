@@ -47,21 +47,14 @@ class AtomRenderer(AbstractRenderer):
                  shading='phong'):
         radii = []
         colorlist = []
-        
-        color_scheme = color_scheme.copy()
-        # Making the guy case_insensitive
-        for k,v in color_scheme.items():
-            color_scheme[k.lower()] = v
-            color_scheme[k.upper()] = v
-        
         natoms = len(r_array)
-        
-        self.radii = radii
+
         for i in range(natoms):
             radii.append(radii_map[type_array[i]])
             colorlist.append(color_scheme.get(type_array[i],
                                         color_scheme['Xx']))
-        
+        self.radii = radii        
+        self.colors = np.array(colorlist, dtype='uint8')
         if backend == 'polygons':
             self.sr = SphereRenderer(widget, r_array, radii, colorlist,
                                      shading = shading)
@@ -82,3 +75,16 @@ class AtomRenderer(AbstractRenderer):
         """
 
         self.sr.update_positions(r_array)
+    
+    def update_colors(self, cols):
+        self.sr.update_colors(cols)
+        
+    def update_radii(self, radii):
+        self.sr.update_radii(radii)
+        
+    def hide(self, mask):
+        self.sr.hide(mask)
+        
+    def change_shading(self, shd):
+        self.sr.change_shading(shd)
+    

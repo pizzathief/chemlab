@@ -59,7 +59,7 @@ To generate such a box we will:
    
     import numpy as np
     from chemlab.core import Atom, Molecule, System
-    from chemlab.graphics import display_system
+    from chemlab.graphics.qt import display_system
      
     # Spacing between two grid points
     spacing = 0.3
@@ -111,7 +111,7 @@ information, this is an one-liner::
 
     from chemlab.io import datafile
     
-    datafile("start.gro").write("system", s)
+    datafile("start.gro", "w").write("system", s)
 
 .top and .mdp files
 -------------------

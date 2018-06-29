@@ -1,153 +1,175 @@
-'''A set of utilities to interact with gromacs'''
+'''Some gromacs utilities'''
+from __future__ import absolute_import
+import os
+import shutil
+import subprocess
+import logging
+import fcntl
+import time
 
-# Need to add a parser to insert this contrib script
+from IPython.display import display
+from ipywidgets.widgets import Textarea
 
-# $ chemlab gromacs energy
-# it should show a little interface to view the energy
-
-# Let's launch the program and determine what happens
 from chemlab.io import datafile
-from pylab import *
-from chemlab.molsim.analysis import rdf
-
-import difflib
-import sys, re
+from chemlab.md.simulation import to_mdp
+from chemlab.md.potential import to_top, to_table
 import numpy as np
 
-def setup_commands(subparsers):
-    groparser = subparsers.add_parser("gromacs")
-    
-    subparsers2 = groparser.add_subparsers()
-    eparser = subparsers2.add_parser("energy")
-    
-    eparser.add_argument('filenames', metavar='filenames', type=str, nargs='+')
-    eparser.add_argument('-e', metavar='energies', type=str, nargs='+',
-                        help='Properties to display in the energy viewer.')
-    
+def _set_process_async(process):
+    """Make the process read/write methods unblocking"""
+    for fd in [process.stderr.fileno(), process.stdout.fileno()]:
+        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
-    eparser.add_argument('-o', help='Do not display GUI and save the plot')
-    
-    eparser.set_defaults(func=lambda args: energy(args, args.o))
 
-    rdfparser = subparsers2.add_parser("rdf")
-    rdfparser.add_argument('selection', metavar='selection', type=str)
-    rdfparser.add_argument('filename', metavar='filename', type=str)
-    rdfparser.add_argument('trajectory', metavar='trajectory', type=str)
-    rdfparser.add_argument('-t', metavar='t', type=str) 
-    rdfparser.set_defaults(func=rdffunc)
+class AsyncCalculation(object):
+
+    def __init__(self, process, simulation, directory, output_function):
+        self.process = process
+        _set_process_async(process)
+        self.directory = directory
+        self.simulation = simulation
+        self.output_function = output_function
+        from tornado.ioloop import PeriodicCallback
+        self._timer = PeriodicCallback(self._produce_output, 100)
+        self._timer.start()
+
+    def wait(self, poll=0.1):
+        kernel = get_ipython().kernel
+        while self.process.poll() is None:
+            kernel.do_one_iteration()
+
+    def _produce_output(self):
+        # kernel = get_ipython().kernel
+        try:
+            line = self.process.stderr.read(512)
+            self.output_function(line)
+        except IOError:
+            pass
+        try:
+            line = self.process.stdout.read(512)
+            self.output_function(line)
+        except IOError:
+            pass
+
+        if self.process.poll() is not None:
+            self._timer.stop()
+            self.output_function(
+                "\n### Process terminated {} ###".format(self.process.returncode))
+            # kernel.do_one_iteration()
+
+    def get_system(self):
+        out = datafile(os.path.join(
+            self.directory, 'confout.gro')).read('system')
+        ret = self.simulation.system.copy()
+        ret.r_array = out.r_array
+        return ret
+
+    def cancel(self):
+        self.process.kill()
+
+    def __del__(self):
+        if self.process.poll() is None:
+            self.cancel()
+
+
+
+def run_gromacs(simulation, directory, clean=False):
+    if clean is False and os.path.exists(directory):
+        raise ValueError(
+            'Cannot override {}, use option clean=True'.format(directory))
+    else:
+        shutil.rmtree(directory, ignore_errors=True)
+        os.mkdir(directory)
+
+    # Parameter file
+    mdpfile = to_mdp(simulation)
+    with open(os.path.join(directory, 'grompp.mdp'), 'w') as fd:
+        fd.write(mdpfile)
+
+    # Topology file
+    topfile = to_top(simulation.system, simulation.potential)
+    with open(os.path.join(directory, 'topol.top'), 'w') as fd:
+        fd.write(topfile)
+
+    # Simulation file
+    datafile(os.path.join(directory, 'conf.gro'),
+             'w').write('system', simulation.system)
+
+    process = subprocess.Popen('cd {} && grompp_d && exec mdrun_d -v'.format(directory),
+                               shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               universal_newlines=True)
+
+    output_box = Textarea()
+    output_box.height = '200px'
+    output_box.font_family = 'monospace'
+    output_box.color = '#AAAAAA'
+    output_box.background_color = 'black'
+    output_box.width = '800px'
+    display(output_box)
+
+    def output_function(text, output_box=output_box):
+        output_box.value += text.decode('utf8')
+        output_box.scroll_to_bottom()
+
+    return AsyncCalculation(process, simulation, directory, output_function)
+
+def to_ndx(mapping):
+    result = ''
+    for k, v in mapping.items():
+        result += '[ {} ]\n'.format(k)
+        result += ' '.join(str(n+1) for n in v) + '\n'
+    return result
     
-def energy(args, output=None):
-    ens = args.e
-    fns = args.filenames
     
-    datafiles = [datafile(fn) for fn in fns] 
+def make_gromacs(simulation, directory, clean=False):
+    """Create gromacs directory structure"""
+    if clean is False and os.path.exists(directory):
+        raise ValueError(
+            'Cannot override {}, use option clean=True'.format(directory))
+    else:
+        shutil.rmtree(directory, ignore_errors=True)
+        os.mkdir(directory)
+
+    # Check custom simulation potential
     
-    quants = datafiles[0].read('avail quantities')
-    for i,e in enumerate(ens):
-        if e not in quants:
-            match = difflib.get_close_matches(e, quants)
-            print 'Quantity %s not present, taking close match: %s' % (e, match[0])
-            ens[i] = match[0]
-    
-    toplot = []
-    for df in datafiles:
-        for e in ens:
-            plotargs = {}
-            plotargs['points'] = df.read('quantity', e)
-            plotargs['filename'] = df.fd.name
-            plotargs['quantity'] = e
+    if simulation.potential.intermolecular.type == 'custom':
+        
+        for pair in simulation.potential.intermolecular.special_pairs:
+            table = to_table(simulation.potential.intermolecular.pair_interaction(*pair), 
+                             simulation.cutoff)
+            fname1 = os.path.join(directory, 
+                                  'table_{}_{}.xvg'.format(pair[0], pair[1]))
+            fname2 = os.path.join(directory, 
+                                  'table_{}_{}.xvg'.format(pair[1], pair[0]))
             
-            toplot.append(plotargs)
-    plots = []
-    legends = []
-    for arg in toplot:
-        p, = plot(arg['points'][0], arg['points'][1])
-        plots.append(p)
-        legends.append(arg['filename'])
-    xlabel('Time(ps)')
-    ylabel(ens[0])
-    
-    ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-    grid()
-    figlegend(plots, legends, 'upper right')
-    show()
+            with open(fname1, 'w') as fd:
+                fd.write(table)
 
-def get_rdf(arguments):
-    return rdf(arguments[0], arguments[1], periodic=arguments[2])
+            with open(fname2, 'w') as fd:
+                fd.write(table)
+            
 
-def rdffunc(args):
-
-    import multiprocessing
-    type_a, type_b = args.selection.split('-')
-    syst = datafile(args.filename).read("system")
-    sel_a = syst.type_array == type_a
-    sel_b = syst.type_array == type_b
-    
-    df = datafile(args.trajectory)
-    t, coords = df.read("trajectory")
-    boxes = df.read("boxes")
-    
-    times = [int(tim) for tim in args.t.split(',')]
-    ind = np.searchsorted(t, times)
-    arguments = ((coords[i][sel_a], coords[i][sel_b], boxes[i]) for i in ind) 
-    
-    rds = map(get_rdf, arguments)
-    
-    for rd in rds:
-        plot(rd[0], rd[1])
-    
-    ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-    
-    xlabel('Time(ps)')
-    ylabel(args.selection)
-
-    grid()
-    show()
-    
-    
-# from PySide.QtUiTools import QUiLoader
-# from PySide.QtCore import QFile
-# from PySide.QtGui import QWidget, QApplication
-
-# import matplotlib
-# matplotlib.use('Qt4Agg')
-# matplotlib.rcParams['backend.qt4'] = 'PySide'
-# import pylab
-
-# from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-# from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-# from matplotlib.figure import Figure
-# import sys
-
-# class App(QApplication):
-#     def __init__(self):
-#         QApplication.__init__(self, sys.argv)
-#         self.loader = loader = QUiLoader()
-#         pref = '/home/gabriele/workspace/chemlab/chemlab/contrib/'
-#         file = QFile(pref + "energyplot.ui")
-#         file.open(QFile.ReadOnly)
-#         self.mainwin = mainwin = loader.load(file)
-#         file.close()
-#         pltcontainer = mainwin.findChild(QWidget, "plotplaceholder")
-#         fig = Figure(figsize=(600,600), dpi=72, facecolor=(1,1,1), edgecolor=(0,0,0))
-#         self.ax = ax = fig.add_subplot(111)
-#         # generate the canvas to display the plot
-#         self.canvas = canvas = FigureCanvas(fig)
-#         ly = pltcontainer.layout()
-#         ly.addWidget(canvas)
-#         #canvas.setParent(self.mainwin)
-#         tb = NavigationToolbar(canvas, self.mainwin)
+        ndx = {'System' : np.arange(simulation.system.n_atoms, dtype='int')}
+        for particle in simulation.potential.intermolecular.particles:
+            idx = simulation.system.where(atom_name=particle)['atom'].nonzero()[0]
+            ndx[particle] = idx
         
-#         ly.addWidget(tb)
-#         self.mainwin.show()
-        
-#     def plot(self, *a, **kw):
-#         self.ax.plot(*a, **kw)
-#         self.canvas.draw()
+        with open(os.path.join(directory, 'index.ndx'), 'w') as fd:
+            fd.write(to_ndx(ndx))
+            
+    # Parameter file
+    mdpfile = to_mdp(simulation)
+    with open(os.path.join(directory, 'grompp.mdp'), 'w') as fd:
+        fd.write(mdpfile)
 
-#     def set_statusbar(self, msg):
-#         self.mainwin.statusBar().showMessage(msg)
+    # Topology file
+    topfile = to_top(simulation.system, simulation.potential)
+    with open(os.path.join(directory, 'topol.top'), 'w') as fd:
+        fd.write(topfile)
 
+    # Simulation file
+    datafile(os.path.join(directory, 'conf.gro'),
+             'w').write('system', simulation.system)
 
-if __name__ == '__main__':
-    main(['pressure'])
+    return directory

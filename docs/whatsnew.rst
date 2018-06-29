@@ -2,6 +2,67 @@
 What's new
 ==========
 
+Version 1.0
+-----------
+    - The core model has been completely redesigned to be faster and
+      more accurate, so that it's super easy to slice and paste together your 
+      data sets. This includes a brand-new api, and some backward-incompatibility.
+
+    - New Trajectory class.
+    
+    - The notebook rendering code has moved to chemview (a sister project).
+
+    - Module for periodic boundary distance computations.
+
+    - Tests suite has been cleaned up and adjusted.
+
+Version 0.4
+-----------
+
+chemlab.mviewer:
+    - Added a full-fledged molecular viewer. But it will be gone
+      in favor of the notebook based chemview.
+
+chemlab.io:
+    - Added cclib integration
+
+chemlab.notebook:
+    - New module with functions for the IPython notebook.
+      Requires chemview.
+
+chemlab.qc:
+    - Example module for quantum chemistry calculation. Please
+      file an issue on GitHub if you want to maintain it.
+
+Version 0.3
+-----------
+
+chemlab.core:
+    - New bond handling with the Molecule.bonds and System.bonds attributes
+    - Possibility to add charges
+
+chemlab.graphics:
+    - Post Processing Effects:
+        - FXAA -- Fast Approximate Antialiasing
+	- Gamma Correction
+	- Glow
+	- Outline
+        - SSAO -- Screen Space Ambient Occlusion
+
+     - Renderers:
+        - Implemented toon shading for different shapes.
+        - CylinderImpostorRenderer -- a really fast way to draw cylinders
+ 
+     - Offline Rendering at any resolution supported by the video card.
+     - Started some work on user interaction for a full molecular viewer.
+
+chemlab.db:
+
+      - New Databases:
+         - RCSB for protein structures
+	 - ToxNetDB for properties
+	 - ChemspiderDB
+	  
 Version 0.2
 -----------
 
